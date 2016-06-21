@@ -5,6 +5,7 @@ var mongodb = require("mongodb");
 var ObjectID = mongodb.ObjectID;
 
 var POSTS_COLLECTION = "posts";
+var COMMENTS_COLLECTION = "comments";
 
 var app = express();
 app.use(express.static(__dirname + "/public"));
@@ -22,7 +23,7 @@ app.use(function(req, res, next) {
 var db;
 
 // Connect to the database before starting the application server.
-mongodb.MongoClient.connect('mongodb://localhost:27017/posts', function (err, database) {
+mongodb.MongoClient.connect('mongodb://localhost:27017/stagram', function (err, database) {
   if (err) {
     console.log(err);
     process.exit(1);
@@ -33,7 +34,7 @@ mongodb.MongoClient.connect('mongodb://localhost:27017/posts', function (err, da
   console.log("Database connection ready");
 
   // Initialize the app.
-  var server = app.listen(process.env.PORT || 8088, function () {
+  var server = app.listen(process.env.PORT || 8089, function () {
     var port = server.address().port;
     console.log("App now running on port", port);
   });
@@ -57,7 +58,7 @@ app.get("/posts", function(req, res) {
     if (err) {
       handleError(res, err.message, "Failed to get contacts.");
     } else {
-      res.status(200).json({"res" : docs});
+      res.status(200).json(docs);
     }
   });
 });
@@ -66,7 +67,7 @@ app.post("/posts", function(req, res) {
   var newPost = req.body;
   newPost.createDate = new Date();
 
-  if (!(req.body.title || req.body.content)) {
+  if (!(req.body.code || req.body.caption)) {
     handleError(res, "Invalid user input", "Must provide a first or last name.", 400);
   }
 
@@ -78,6 +79,28 @@ app.post("/posts", function(req, res) {
     }
   });
 });
+
+
+app.post("/postsx", function(req, res) {
+  var posts = req.body;
+  for(var i=0; i<posts.length; i++){
+      var newPost = posts[i];
+      newPost.createDate = new Date();
+
+     
+
+      db.collection(POSTS_COLLECTION).insertOne(newPost, function(err, doc) {
+        if (err) {
+          handleError(res, err.message, "Failed to create new post.");
+        } else {
+          
+        }
+      });
+  }
+  res.status(201).json({"status": "ok"});
+});
+
+
 
 /*  "/posts/:id"
  *    GET: find post by id
@@ -110,6 +133,75 @@ app.put("/posts/:id", function(req, res) {
 
 app.delete("/posts/:id", function(req, res) {
   db.collection(POSTS_COLLECTION).deleteOne({_id: new ObjectID(req.params.id)}, function(err, result) {
+    if (err) {
+      handleError(res, err.message, "Failed to delete post");
+    } else {
+      res.status(204).end();
+    }
+  });
+});
+
+
+/*  "/posts"
+ *    GET: finds all posts
+ *    POST: creates a new post
+ */
+
+app.get("/comments", function(req, res) {
+  db.collection(COMMENTS_COLLECTION).find({}).toArray(function(err, docs) {
+    if (err) {
+      handleError(res, err.message, "Failed to get contacts.");
+    } else {
+      res.status(200).json(docs);
+    }
+  });
+});
+
+app.post("/comments", function(req, res) {
+  var newPost = req.body;
+  newPost.createDate = new Date();
+
+
+  db.collection(COMMENTS_COLLECTION).insertOne(newPost, function(err, doc) {
+    if (err) {
+      handleError(res, err.message, "Failed to create new post.");
+    } else {
+      res.status(201).json(doc.ops[0]);
+    }
+  });
+});
+
+/*  "/posts/:id"
+ *    GET: find post by id
+ *    PUT: update post by id
+ *    DELETE: deletes post by id
+ */
+
+app.get("/comments/:id", function(req, res) {
+  db.collection(COMMENTS_COLLECTION).findOne({ _id: new ObjectID(req.params.id) }, function(err, doc) {
+    if (err) {
+      handleError(res, err.message, "Failed to get post");
+    } else {
+      res.status(200).json(doc);
+    }
+  });
+});
+
+app.put("/comments/:id", function(req, res) {
+  var updateDoc = req.body;
+  delete updateDoc._id;
+
+  db.collection(COMMENTS_COLLECTION).updateOne({_id: new ObjectID(req.params.id)}, updateDoc, function(err, doc) {
+    if (err) {
+      handleError(res, err.message, "Failed to update post");
+    } else {
+      res.status(204).end();
+    }
+  });
+});
+
+app.delete("/comments/:id", function(req, res) {
+  db.collection(COMMENTS_COLLECTION).deleteOne({_id: new ObjectID(req.params.id)}, function(err, result) {
     if (err) {
       handleError(res, err.message, "Failed to delete post");
     } else {
